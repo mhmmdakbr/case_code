@@ -1,0 +1,23 @@
+<h3> User register List</h3>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>email</th>
+            <th>password</th>
+            <th>username</th>
+            <th>phone</th>
+            <th>saldo</th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each list}}
+        <tr>
+            <td>{{this.email}}</td>
+            <td>{{this.PASSWORD}}</td>
+            <td>{{this.username}}</td>
+            <td>{{this.phone}}</td>
+            <td>{{this.saldo}}</td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>

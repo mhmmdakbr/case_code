@@ -1,0 +1,22 @@
+<h3><a class="btn btn-secondary" href="/beacon"><i class="fa fa-plus"></i> Create New</a> Beacon List</h3>
+<table class="table table-striped">
+    <thead>
+        <tr>
+            <th>Beacon Name</th>
+            <th>UUID</th>
+            <th></th>
+        </tr>
+    </thead>
+    <tbody>
+        {{#each list}}
+        <tr>
+            <td>{{this.beaconName}}</td>
+            <td>{{this.uuid}}</td>
+            <td>
+                <a href="/beacon/{{this._id}}"><i class="fa fa-pencil fa-lg" aria-hidden="true"></i></a>
+                <a href="/beacon/delete/{{this._id}}" onclick="return confirm('Are you sure to delete this record ?');"><i class="fa fa-trash fa-lg" aria-hidden="true"></i></a>
+            </td>
+        </tr>
+        {{/each}}
+    </tbody>
+</table>
