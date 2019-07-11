@@ -18,18 +18,9 @@ router.post('/', (req, res) => {
     addHistoryPoin(req, res)
 });
 
-// update merchant
-router.put('/', (req, res) => {
-    merchantUpdate(req, res);
-});
-
-// add merchant
-router.post('/', (req, res) => {
-    addMerchant(req, res);
-});
-
-router.delete('/', (req, res) => {
-    merchantRemove(req, res);
+// Total Poin User
+router.get('/sum', (req, res) => {
+    getTotalPoinUser(req, res);
 });
 
 /*************************************** Function List **********************************************/
@@ -88,19 +79,6 @@ function getTotalPoinUser(req, res) {
             console.log(error)
         } else {
             res.send(rows)
-        }
-    });
-}
-
-function merchantRemove(req, res) {
-    const sql = `delete from merchant
-	                                WHERE
-                                        merchantID = '${req.body.merchantID}' `;
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            res.send(true)
         }
     });
 }
