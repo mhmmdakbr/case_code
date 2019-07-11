@@ -2,24 +2,34 @@ const express = require('express');
 var router = express.Router();
 const mysqlCon = require('../models/mysqlCon');
 
-
+//show all master data poin
 router.get('/master', (req, res) => {
-    //show all from master_poin
     masterPointList(req, res)
 });
 
+//show all poin history
 router.get('/history', (req, res) => {
-    //show all from master_poin
     historyPointList(req, res)
 });
 
-// list all merchant
+// update point user
 router.post('/', (req, res) => {
+    /* post body
+       {
+         "user_id": "nanto",
+         "poin_type": "openApp"
+       }
+    */
     addHistoryPoin(req, res)
 });
 
-// Total Poin User
+// get total poin user 
 router.get('/sum', (req, res) => {
+    /* post body 
+
+     {"user_id" : "nanto"}
+
+    */
     getTotalPoinUser(req, res);
 });
 
