@@ -1,6 +1,0 @@
-DEBIT TRANSACTION REPORTING,,,,,,,,,,,,,,
-Muslimpocket,,,,,,,,,,,,,,
-Date :,2019-07-16,,,,,,,,,,,,,
-No,Merchant ID,Merchant Name,Channel,Transaction ID,Bill No,Reference ID,Customer Name,Customer Email,Bill Refference,Transaction Date,Payment Date,Amount,Payment Total,Status
-1,32561,Muslimpocket,OVO,3256181200000257,51,2784389994127103256181200000257,Test Trx,rizki.febrianto@konekthing.com,51,2019-07-16 09:15:14,2019-07-16 09:15:31.547,50,50,Payment Sukses
-2,32561,Muslimpocket,OVO,3256181200000216,47,2784389994127103256181200000216,Test Trx,rizki.febrianto@konekthing.com,47,2019-07-15 19:42:31,2019-07-15 19:43:00.906,5000,5000,Payment Sukses
