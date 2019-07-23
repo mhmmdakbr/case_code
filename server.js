@@ -6,7 +6,7 @@ const bodyparser = require('body-parser');
 
 var cors = require('cors');
 
-const poinController = require('./controllers/poinController');
+const rekonsController = require('./controllers/rekonsController');
 
 function main () {
     var app = express();
@@ -26,7 +26,7 @@ function main () {
         console.log('Express server started at port : 3001');
     });
     
-    app.use('/poin', poinController);
+    app.use('/rekons', rekonsController);
 
 }
 
