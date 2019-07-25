@@ -33,25 +33,8 @@ router.get('/get/databyattachment/:attachment_id', (req, res) => {
     getAllData(req, res)
 });
 
-// update point user
-router.post('/', (req, res) => {
-    /* post body
-       {
-         "user_id": "nanto",
-         "poin_type": "openApp"
-       }
-    */
-    addHistoryPoin(req, res)
-});
-
-// get total poin user 
-router.get('/sum', (req, res) => {
-    /* post body 
-
-     {"user_id" : "nanto"}
-
-    */
-    getTotalPoinUser(req, res);
+router.get('/get/allattachment', (req, res) => {
+    getAllAttachment(req, res)
 });
 
 /*************************************** Function List **********************************************/
@@ -164,9 +147,27 @@ async function convertCsv(req, res) {
 
 }
 
+function getAllAttachment(req, res) {
+
+    var sql = `SELECT  * from attachment `;
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            console.log(error)
+        } else {
+            res.send(rows)
+        }
+    });
+}
+
 function getAllData(req, res) {
 
-    var sql = `SELECT  * from history_poin`;
+    var sql = `SELECT  * from trx tr
+    INNER JOIN transaction tx ON tr.ref_id = tx.reference_id
+    INNER JOIN ustadz ut ON tr.id_ustadz = ut.id_ustadz
+    INNER JOIN masjid ms ON tr.id_masjid = ms.id_masjid
+    INNER JOIN bank ba ON tr.id_bank = ba.bank_id
+    WHERE tx.attachment_id = ${req.params.attachment_id}`;
 
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
@@ -178,8 +179,13 @@ function getAllData(req, res) {
 }
 
 function getDataSummary(req, res) {
-
-    var sql = `SELECT  * from history_poin`;
+    const sql = `SELECT tr.tgl_transaksi, ba.nama_bank, count(tx.id_bank) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
+    FROM trx tx
+    INNER JOIN transaction tr ON tx.ref_id = tr.reference_id 
+    INNER JOIN bank ba ON tx.id_bank = ba.bank_id
+    WHERE tr.attachment_id = ${req.params.attachment_id}
+    GROUP BY tr.tgl_transaksi, ba.nama_bank 
+    ORDER BY tr.tgl_transaksi`;
 
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
@@ -188,39 +194,7 @@ function getDataSummary(req, res) {
             res.send(rows)
         }
     });
-}
 
-function addHistoryPoin(req, res) {
-    const sql = `INSERT INTO history_poin 
-	VALUES
-	(0, 
-	'${req.body.user_id}', 
-	'${req.body.poin_type}', 
-	NOW()
-	)`;
-
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            // after insert user get totally poin
-            getTotalPoinUser(req, res)
-        }
-    });
-
-}
-
-function getTotalPoinUser(req, res) {
-    const sql = `SELECT b.user_id, SUM(a.poin) AS total FROM master_poin a INNER JOIN history_poin b ON a.poin_type = b.poin_type
-    WHERE b.user_id = '${req.body.user_id}'`;
-    console.log(sql);
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            res.send(rows)
-        }
-    });
 }
 
 module.exports = router;

@@ -1,0 +1,45 @@
+# Adonis' ignore
+# Node modules
+node_modules
+package-lock.json
+
+# Adonis directory for storing tmp files
+tmp
+public
+
+# Environment variables, never commit this file
+.env
+
+# The development sqlite file
+database/development.sqlite
+
+# React's ignore
+# Node modules
+client/node_modules
+client/package-lock.json
+
+# See https://help.github.com/ignore-files/ for more about ignoring files.
+
+# dependencies
+client/build
+
+# testing
+client//coverage
+
+# production
+client//build
+
+# misc
+client/.DS_Store
+client/.idea
+client/.env.local
+client/.env.development.local
+client/.env.test.local
+client/.env.production.local
+
+client/npm-debug.log*
+client/yarn-debug.log*
+client/yarn-error.log*
+client/yarn.lock
+
+.vscode/
