@@ -23,7 +23,7 @@ function main () {
     
     
     app.listen(3002, () => {
-        console.log('Express server started at port : 3001');
+        console.log('Express server started at port : 3002');
     });
     
     app.use('/rekons', rekonsController);

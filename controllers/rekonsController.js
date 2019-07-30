@@ -69,7 +69,7 @@ async function convertCsv(req, res) {
                                     console.log(row.values, rowIndex)
                                     if (row.values.includes("OVO", 4)) {
                                         mysqlCon.query(`
-                    INSERT INTO transaksi ( 
+                    INSERT INTO transaction ( 
                     merchant_id , merchant_name , channel ,   
                     transaction_id , reference_id , tgl_transaksi , 
                       tgl_pembayaran , amount , total_amount ,
@@ -77,7 +77,7 @@ async function convertCsv(req, res) {
                       status
                   ) values ( 
                       ${parseInt(row.values[2])} , '${row.values[3]}' , '${row.values[4]}' , 
-                      ${parseInt(row.values[5])} , ${parseInt(row.values[6])} ,CAST('${row.values[11]}' AS datetime) ,  
+                      '${row.values[5]}' , '${row.values[7]}' , CAST('${row.values[11]}' AS datetime) ,  
                       CAST('${row.values[12]}' AS datetime) , ${parseInt(row.values[13])} , ${parseInt(row.values[14])} , 
                       ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
                       '${row.values[15]}' 
