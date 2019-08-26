@@ -43,6 +43,20 @@ router.get('/get/alldata', (req, res) => {
     getAllData(req, res)
 });
 
+// add params
+router.post('/add', (req, res) => {
+    addParam(req,res)
+});
+
+//update
+router.put('/update', (req, res) => {
+    updateParam(req,res)
+});
+
+//delete
+router.delete('/delete', (req,res) => {
+    paramsRemove(req,res)
+});
 /*************************************** Function List **********************************************/
 
 const getDataKonekthing = () => {
@@ -263,6 +277,50 @@ function getDataSummary(req, res) {
         }
     });
 
+}
+
+function addParam(req,res) {
+
+    var sql = `INSERT INTO parameter (nama_parameter, nilai_parameter, channel)
+                VALUES('${req.body.nama_parameter}','${req.body.nilai_parameter}','${req.body.channel}')`
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            res.send({ status: "error", desc: error })
+        } else {
+            res.send({ status: "success", desc: "Success" })
+        }
+    });
+}
+
+function updateParam(req, res) {
+    const sql = `UPDATE parameter 
+                            SET
+                            nama_parameter = '${req.body.nama_parameter}' , 
+                            nilai_parameter = '${req.body.nilai_parameter}' , 
+                            channel = '${req.body.channel}' 
+	                                WHERE
+                                    id_parameter = '${req.body.id_parameter}' `;
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            res.send({ status: "error", desc: error })
+        } else {
+            res.send({ status: "success", desc: "Success update" })
+        }
+    });
+}
+
+function paramsRemove(req, res) {
+    const sql = `delete from parameter
+	                                WHERE
+                                    id_parameter = '${req.body.id_parameter}' `;
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            res.send({ status: "error", desc: error })
+        } else {
+            res.send({ status: "success", desc: "Success delete" })
+        }
+    });
 }
 
 module.exports = router;
