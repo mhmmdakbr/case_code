@@ -5,11 +5,13 @@ var con = mysql.createConnection({
   port: "3306",
   user: "root",
   password: "Immsp4102",
-  database: "rekonsil"
+  database: "rekonsil",
+  multipleStatements: true
 });
 
 con.connect(function (err){
     if(err) throw err;
-});
+})
+
 
 module.exports = con;
