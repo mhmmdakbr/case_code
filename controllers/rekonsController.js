@@ -25,6 +25,10 @@ router.post('/upload/ovo', upload.single('file'), (req, res) => {
     convertCsvOVO(req, res)
 });
 
+router.post('/upload/ovo', upload.single('file'), (req, res) => {
+    convertCsvLinkAja(req, res)
+});
+
 //show data summary sesuai semua data yg pertama dimunculkan
 router.get('/get/datasummary/', (req, res) => {
     getDataSummary(req, res)
@@ -211,7 +215,7 @@ async function convertCsvOVO(req, res) {
         });
 }
 
-async function convertCsvOVO(req, res) {
+async function convertCsvLinkAja(req, res) {
 
     //1.fetching data dari dataKonekthing
     var dataKonekthing = await getDataKonekthing();
