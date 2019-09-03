@@ -42,6 +42,11 @@ router.post('/add', (req, res) => {
     addParam(req,res)
 });
 
+//read or get data params
+router.get('/get/params', (req, res) => {
+    getParams(req, res)
+});
+
 //update
 router.put('/update', (req, res) => {
     updateParam(req,res)
@@ -246,6 +251,19 @@ function paramsRemove(req, res) {
             res.send({ status: "error", desc: error })
         } else {
             res.send({ status: "success", desc: "Success delete" })
+        }
+    });
+}
+
+function getParams(req, res) {
+
+    var sql = `SELECT  * from parameter `;
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            console.log(error)
+        } else {
+            res.send(rows)
         }
     });
 }
