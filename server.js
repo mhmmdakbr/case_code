@@ -22,8 +22,8 @@ function main () {
     app.set('view engine', 'hbs');
     
     
-    app.listen(3002, () => {
-        console.log('Express server started at port : 3002');
+    app.listen(3004, () => {
+        console.log('Express server started at port : 3004');
     });
     
     app.use('/rekons', rekonsController);

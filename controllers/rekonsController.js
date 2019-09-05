@@ -25,7 +25,7 @@ router.post('/upload/ovo', upload.single('file'), (req, res) => {
     convertCsvOVO(req, res)
 });
 
-router.post('/upload/ovo', upload.single('file'), (req, res) => {
+router.post('/upload/link aja', upload.single('file'), (req, res) => {
     convertCsvLinkAja(req, res)
 });
 
@@ -250,17 +250,17 @@ async function convertCsvLinkAja(req, res) {
                                     if (row.values.includes("LinkAja", 4)) {
                                         //4.matching data between dataKonekthing and rows array hasil convert
                                         for (var i = 0; i < dataKonekthing.length; i++) {
-                                            if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
-                                                console.log('jalan')
+                                            if (parseInt(dataKonekthing[i].trxId) === parseInt(row.values[6])) {
+                                                console.log('jalan')    
                                                 match_data.push(dataKonekthing[i])
                                                 mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
                                                     transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
                                                     attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
-                                                    ${row.values[2]} , '${row.values[3]}' , 'linkaja' , '${dataKonekthing[i].trx_id}' , CAST('${dataKonekthing[i].bill_date}' AS datetime) , ${parseInt(dataKonekthing[i].payment_total)},
-                                                    CAST('${dataKonekthing[i].payment_date}' AS datetime) , ${parseInt(dataKonekthing[i].bill_total)} , ${id_attachment} , 
+                                                    ${row.values[2]} , '${row.values[3]}' , 'linkaja' , '${dataKonekthing[i].trxId}' , CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)},
+                                                    CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)} , ${id_attachment} , 
                                                     "${dataKonekthing[i].masjid_nama}" , '${dataKonekthing[i].bank_nama}' , '${dataKonekthing[i].masjid_no_rekening}' , 
-                                                    '${dataKonekthing[i].payment_status_desc}', ${parseInt(dataKonekthing[i].payment_total) * (parameters[0].nilai_parameter)} , 
-                                                    ${parseInt(dataKonekthing[i].bill_reff)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
+                                                    '${dataKonekthing[i].status}', ${parseInt(dataKonekthing[i].amount) * (parameters[0].nilai_parameter)} , 
+                                                    ${parseInt(dataKonekthing[i].refNum)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
                                                 )`, async function (error, rows, fields) {
                                                         if (error) {
                                                             console.log(error)
