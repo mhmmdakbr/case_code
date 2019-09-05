@@ -336,7 +336,7 @@ async function convertCsvLinkAja(req, res) {
         });
 }
 
-function getAllAttachment(req, res) {
+async function convertCsvGoPay(req, res) {
 
     //1.fetching data dari dataKonekthing
     var dataKonekthing = await getDataKonekthing('gopay');
