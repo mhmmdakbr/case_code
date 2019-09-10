@@ -29,6 +29,10 @@ router.post('/upload/ovo', upload.single('file'), (req, res) => {
     convertCsvOVO(req, res)
 });
 
+router.post('/upload/link aja', upload.single('file'), (req, res) => {
+    convertCsvLinkAja(req, res)
+});
+    
 router.post('/upload/gopay', upload.single('file'), (req, res) => {
     convertCsvGoPay(req, res)
 });
@@ -237,6 +241,118 @@ async function convertCsvOVO(req, res) {
                             worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
                                 console.log("Row " + rowNumber + " = " + row.values)
                                 if (row.values.includes("OVO", 4)) {
+                                    mysqlCon.query(`
+            INSERT INTO transaksi ( 
+            merchant_id , merchant_name , channel ,   
+            transaction_id , reference_id , tgl_transaksi , 
+              tgl_pembayaran , amount , total_amount ,
+              attachment_id , customer_email ,  customer_name ,
+              status
+          ) values ( 
+              ${row.values[2]} , '${row.values[3]}' , '${row.values[4]}' , 
+              ${row.values[5]} , ${row.values[6]} , '${row.values[11]}',  
+              '${row.values[12]}' , ${row.values[13]} , ${row.values[14]} , 
+              ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
+              '${row.values[15]}' 
+          )`, async function (error, rows, fields) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(400).send('Oops, something happens')
+                                            } else {
+                                                count++
+                                            }
+                                        });
+                                    count++
+                                }
+                            });
+                            res.send(`data : ${count}`)
+                        });
+
+
+                } else {
+                    res.send("file bukan csv atau xlsx")
+                }
+            }
+        });
+}
+
+async function convertCsvLinkAja(req, res) {
+
+    //1.fetching data dari dataKonekthing
+    var dataKonekthing = await getDataKonekthing();
+
+    //get parameter for shared fee
+    var parameters = await getParameter('linkaja');
+
+    var id_attachment = 0
+
+    //2.insert to db table attachment, channel disesuain 
+    await mysqlCon.query(`
+                        INSERT INTO attachment ( 
+                            attachment_name , import_at , ext_name , channel
+                          ) values ( 
+                            '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'linkaja'
+                          )`, async function (error, rows, fields) {
+            if (error) {
+                res.send({ status: 'failed', desc: error })
+            } else {
+                id_attachment = rows.insertId
+                var count = 0;
+                var match_data = []
+                var workbook = new Excel.Workbook()
+                console.log("type : ", req.file.mimetype)
+                if (req.file.mimetype.includes("spreadsheet")) {
+                    //3.proses perubahan xlsx menjadi array
+                    await workbook.xlsx.readFile(req.file.path)
+                        .then(workbook => {
+                            workbook.eachSheet((sheet, id) => {
+                                sheet.eachRow((row, rowIndex) => {
+                                    console.log(row.values, rowIndex)
+                                    if (row.values.includes("LinkAja", 4)) {
+                                        //4.matching data between dataKonekthing and rows array hasil convert
+                                        for (var i = 0; i < dataKonekthing.length; i++) {
+                                            if (parseInt(dataKonekthing[i].trxId) === parseInt(row.values[6])) {
+                                                console.log('jalan')    
+                                                match_data.push(dataKonekthing[i])
+                                                mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
+                                                    transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
+                                                    attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
+                                                    ${row.values[2]} , '${row.values[3]}' , 'linkaja' , '${dataKonekthing[i].trxId}' , CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)},
+                                                    CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)} , ${id_attachment} , 
+                                                    "${dataKonekthing[i].masjid_nama}" , '${dataKonekthing[i].bank_nama}' , '${dataKonekthing[i].masjid_no_rekening}' , 
+                                                    '${dataKonekthing[i].status}', ${parseInt(dataKonekthing[i].amount) * (parameters[0].nilai_parameter)} , 
+                                                    ${parseInt(dataKonekthing[i].refNum)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
+                                                )`, async function (error, rows, fields) {
+                                                        if (error) {
+                                                            console.log(error)
+                                                            res.send({ status: 'failed', desc: error })
+                                                        }
+
+                                                    });
+                                                count++
+                                            }
+                                        }
+                                    }
+
+                                })
+                            })
+
+                        })
+                    if (count < 1) {
+                        console.log(count)
+                        res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
+                    } else {
+                        console.log(count)
+                        res.send({ status: 'success', desc: `${count} data match`, match_data })
+                    }
+
+
+                } else if (req.file.mimetype.includes("csv")) {
+                    await workbook.csv.readFile(req.file.path)
+                        .then(worksheet => {
+                            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                                console.log("Row " + rowNumber + " = " + row.values)
+                                if (row.values.includes("LinkAja", 4)) {
                                     mysqlCon.query(`
             INSERT INTO transaksi ( 
             merchant_id , merchant_name , channel ,   
