@@ -476,8 +476,9 @@ function getAllDataByAttachment(req, res) {
 
 function getAllData(req, res) {
 
-    var sql = `SELECT  * from transaction tr
-    WHERE tx.attachment_id = ${req.params.attachment_id}`;
+    var sql = `SELECT  tr.nama_rekening_penerima, tr.bank_penerima, tr.no_rekening_penerima, tr.total_pembayaran 
+    FROM transaction tr
+    WHERE tr.status LIKE '%Sukses%' `;
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
             console.log(error)
