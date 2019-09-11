@@ -5,6 +5,10 @@ const Excel = require('exceljs')
 const fetch = require('node-fetch')
 const { URLSearchParams } = require('url');
 
+let jwt = require('jsonwebtoken');
+var _ = require('lodash');
+let config = require('../config');
+
 
 /// ini untuk upload ///
 const multer = require('multer');
@@ -70,7 +74,55 @@ router.put('/update', (req, res) => {
 router.delete('/delete', (req,res) => {
     paramsRemove(req,res)
 });
+
+//login
+router.post('/login', (req, res) => {
+    var userID = req.body.userID;
+    var Password = req.body.password;
+
+    if (!_.isEmpty(userID) && !_.isEmpty(Password)) {
+
+        login(req, res)
+
+    } else {
+        res.send({status : "error", desc: "user and password cant null"});
+    }
+
+});
 /*************************************** Function List **********************************************/
+
+function login(req, res) {
+    const sql = `select * from users where email = '${req.body.userID}' and password = '${req.body.password}'`;
+
+    let token;
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            console.log(error)
+            res.send({status : "error", desc: error})
+        } else {
+            if(!_.isEmpty(rows)) {
+                token = giveToken(req.body.email)
+            } else {
+                rows = '';
+            }
+            res.send({ userProfile: rows, token: token })
+        }
+    });
+}
+
+function giveToken(userID) {
+
+    let token = jwt.sign({ username: userID },
+        config.secret,
+        {
+            expiresIn: '24h'
+        }
+    );
+
+    return token;
+
+}
 
 const getDataKonekthing = type => {
     return new Promise(resolve => {
