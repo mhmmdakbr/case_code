@@ -25,7 +25,7 @@ var upload = multer({ storage: storage })
 
 
 //upload and convert csv & xlxs
-router.post('/upload/ovo',, upload.single('file'), (req, res) => {
+router.post('/upload/ovo', upload.single('file'), (req, res) => {
     convertCsvOVO(req, res)
 });
 
@@ -38,16 +38,16 @@ router.post('/upload/gopay', upload.single('file'), (req, res) => {
 });
 
 //show data summary sesuai semua data yg pertama dimunculkan
-router.get('/get/datasummary/',, (req, res) => {
+router.get('/get/datasummary/', (req, res) => {
     getDataSummary(req, res)
 });
 
 //show data semua sesuai attachment yg dipilih
-router.get('/get/databyattachment/:attachment_id',, (req, res) => {
+router.get('/get/databyattachment/:attachment_id', (req, res) => {
     getAllDataByAttachment(req, res)
 });
 
-router.get('/get/allattachment/:channel',, (req, res) => {
+router.get('/get/allattachment/:channel', (req, res) => {
     getAllAttachment(req, res)
 });
 
