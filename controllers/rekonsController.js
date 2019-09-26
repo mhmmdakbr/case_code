@@ -51,7 +51,7 @@ router.get('/get/allattachment/:channel', (req, res) => {
     getAllAttachment(req, res)
 });
 
-router.get('/get/alldata',, (req, res) => {
+router.get('/get/alldata', (req, res) => {
     getAllData(req, res)
 });
 
