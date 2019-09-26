@@ -24,6 +24,7 @@ var upload = multer({ storage: storage })
 ///                 ///
 
 
+
 //upload and convert csv & xlxs
 router.post('/upload/ovo',checkToken, upload.single('file'), (req, res) => {
     convertCsvOVO(req, res)
@@ -75,6 +76,11 @@ router.delete('/delete', (req,res) => {
     paramsRemove(req,res)
 });
 
+//exportcsv
+router.delete('/exportcsv', (req,res) => {
+    paramsRemove(req,res)
+});
+
 //login
 router.post('/login', (req, res) => {
     var userID = req.body.userID;
@@ -90,6 +96,7 @@ router.post('/login', (req, res) => {
 
 });
 /*************************************** Function List **********************************************/
+
 
 function login(req, res) {
     const sql = `select * from users where email = '${req.body.userID}' and password = '${req.body.password}'`;
@@ -145,6 +152,24 @@ const getDataKonekthing = type => {
             .then(response => response.json())
             .then(data => { if (data) { resolve(dataKonekthing = data.result) } })
 
+    });
+}
+
+const getDataBank = (bank,date) => {
+    return new Promise(resolve => {
+        var sql = `SELECT no_rekening_penerima, nama_rekening_penerima, total_pembayaran 
+        FROM transaction
+        WHERE bank_penerima = '${bank}' AND tgl_transaksi = '2019-08-09 18:04:41.000000' AND status LIKE '%sukses%'`;
+        console.log(sql)
+        mysqlCon.query(sql,
+            function (error, rows, fields) {
+                if (error) {
+                    console.log(error)
+                } else {
+                    // console.log(rows[0])
+                    resolve(rows);
+                }
+            });
     });
 }
 
@@ -205,8 +230,8 @@ async function convertCsvOVO(req, res) {
                                                 mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
                                                     transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
                                                     attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
-                                                    ${row.values[2]} , '${row.values[3]}' , 'ovo' , '${dataKonekthing[i].trx_id}' , CAST('${dataKonekthing[i].bill_date}' AS datetime) , ${parseInt(dataKonekthing[i].payment_total)},
-                                                    CAST('${dataKonekthing[i].payment_date}' AS datetime) , ${parseInt(dataKonekthing[i].bill_total)} , ${id_attachment} , 
+                                                    ${row.values[2]} , '${row.values[3]}' , 'ovo' , '${dataKonekthing[i].trx_id}' , CAST('${dataKonekthing[i].bill_date}' AS date) , ${parseInt(dataKonekthing[i].payment_total)},
+                                                    CAST('${dataKonekthing[i].payment_date}' AS date) , ${parseInt(dataKonekthing[i].bill_total)} , ${id_attachment} , 
                                                     "${dataKonekthing[i].masjid_nama}" , '${dataKonekthing[i].bank_nama}' , '${dataKonekthing[i].masjid_no_rekening}' , 
                                                     '${dataKonekthing[i].payment_status_desc}', ${parseInt(dataKonekthing[i].payment_total) * (parameters[0].nilai_parameter)} , 
                                                     ${parseInt(dataKonekthing[i].bill_reff)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
@@ -541,7 +566,7 @@ function getAllData(req, res) {
 }
 
 function getDataSummary(req, res) {
-    const sql = `SELECT tr.tgl_transaksi, tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
+    const sql = `SELECT DATE_FORMAT(tr.tgl_transaksi, "%Y-%m-%d"), tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
     FROM transaction tr
     GROUP BY tr.tgl_transaksi, tr.bank_penerima
     ORDER BY tr.tgl_transaksi`;
