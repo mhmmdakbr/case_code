@@ -565,7 +565,7 @@ function getAllData(req, res) {
 }
 
 function getDataSummary(req, res) {
-    const sql = `SELECT DATE_FORMAT(tr.tgl_transaksi, "%Y-%m-%d"), tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
+    const sql = `SELECT DATE_FORMAT(tr.tgl_transaksi, "%Y-%m-%d") as tgl_transaksi, tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
     FROM transaction tr
     GROUP BY tr.tgl_transaksi, tr.bank_penerima
     ORDER BY tr.tgl_transaksi`;
