@@ -9,12 +9,9 @@ let checkToken = (req, res, next) => {
       // Remove Bearer from string
       token = token.slice(7, token.length);
     }
-    jwt.verify(token, config.secret, (err, decoded) => {
+    jwt.verify(token, config.secret, (err, decoded, status) => {
       if (err) {
-        return res.json({
-          success: false,
-          message: 'Token is not valid'
-        });
+        res.status(401).send(err)
       } else {
         req.decoded = decoded;
         next();
