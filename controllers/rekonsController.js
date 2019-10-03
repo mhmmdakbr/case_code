@@ -32,7 +32,7 @@ router.post('/upload/ovo', upload.single('file'), (req, res) => {
 router.post('/upload/link aja', upload.single('file'), (req, res) => {
     convertCsvLinkAja(req, res)
 });
-    
+
 router.post('/upload/gopay', upload.single('file'), (req, res) => {
     convertCsvGoPay(req, res)
 });
@@ -57,7 +57,7 @@ router.get('/get/alldata', (req, res) => {
 
 // add params
 router.post('/add', (req, res) => {
-    addParam(req,res)
+    addParam(req, res)
 });
 
 //read or get data params
@@ -65,14 +65,23 @@ router.get('/get/params', (req, res) => {
     getParams(req, res)
 });
 
+//read or get data params detail by id
+router.get('/get/paramsdetail/:id_parameter', (req, res) => {
+    getParamsDetail(req, res)
+});
+
+router.get('/get/paramsinput', (req, res) => {
+    getParamsInput(req, res)
+});
+
 //update
 router.put('/update', (req, res) => {
-    updateParam(req,res)
+    updateParam(req, res)
 });
 
 //delete
-router.delete('/delete', (req,res) => {
-    paramsRemove(req,res)
+router.delete('/delete', (req, res) => {
+    paramsRemove(req, res)
 });
 
 //login
@@ -85,7 +94,7 @@ router.post('/login', (req, res) => {
         login(req, res)
 
     } else {
-        res.send({status : "error", desc: "user and password cant null"});
+        res.send({ status: "error", desc: "user and password cant null" });
     }
 
 });
@@ -99,9 +108,9 @@ function login(req, res) {
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
             console.log(error)
-            res.send({status : "error", desc: error})
+            res.send({ status: "error", desc: error })
         } else {
-            if(!_.isEmpty(rows)) {
+            if (!_.isEmpty(rows)) {
                 token = giveToken(req.body.email)
             } else {
                 rows = '';
@@ -181,28 +190,28 @@ async function convertCsvOVO(req, res) {
                           ) values ( 
                             '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'ovo'
                           )`, async function (error, rows, fields) {
-            if (error) {
-                res.send({ status: 'failed', desc: error })
-            } else {
-                id_attachment = rows.insertId
-                var count = 0;
-                var match_data = []
-                var workbook = new Excel.Workbook()
-                console.log("type : ", req.file.mimetype)
-                if (req.file.mimetype.includes("spreadsheet")) {
-                    //3.proses perubahan xlsx menjadi array
-                    await workbook.xlsx.readFile(req.file.path)
-                        .then(workbook => {
-                            workbook.eachSheet((sheet, id) => {
-                                sheet.eachRow((row, rowIndex) => {
-                                    console.log(row.values, rowIndex)
-                                    if (row.values.includes("OVO", 4)) {
-                                        //4.matching data between dataKonekthing and rows array hasil convert
-                                        for (var i = 0; i < dataKonekthing.length; i++) {
-                                            if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
-                                                console.log('jalan')
-                                                match_data.push(dataKonekthing[i])
-                                                mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
+        if (error) {
+            res.send({ status: 'failed', desc: error })
+        } else {
+            id_attachment = rows.insertId
+            var count = 0;
+            var match_data = []
+            var workbook = new Excel.Workbook()
+            console.log("type : ", req.file.mimetype)
+            if (req.file.mimetype.includes("spreadsheet")) {
+                //3.proses perubahan xlsx menjadi array
+                await workbook.xlsx.readFile(req.file.path)
+                    .then(workbook => {
+                        workbook.eachSheet((sheet, id) => {
+                            sheet.eachRow((row, rowIndex) => {
+                                console.log(row.values, rowIndex)
+                                if (row.values.includes("OVO", 4)) {
+                                    //4.matching data between dataKonekthing and rows array hasil convert
+                                    for (var i = 0; i < dataKonekthing.length; i++) {
+                                        if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
+                                            console.log('jalan')
+                                            match_data.push(dataKonekthing[i])
+                                            mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
                                                     transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
                                                     attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
                                                     ${row.values[2]} , '${row.values[3]}' , 'ovo' , '${dataKonekthing[i].trx_id}' , CAST('${dataKonekthing[i].bill_date}' AS datetime) , ${parseInt(dataKonekthing[i].payment_total)},
@@ -211,37 +220,37 @@ async function convertCsvOVO(req, res) {
                                                     '${dataKonekthing[i].payment_status_desc}', ${parseInt(dataKonekthing[i].payment_total) * (parameters[0].nilai_parameter)} , 
                                                     ${parseInt(dataKonekthing[i].bill_reff)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
                                                 )`, async function (error, rows, fields) {
-                                                        if (error) {
-                                                            console.log(error)
-                                                            res.send({ status: 'failed', desc: error })
-                                                        }
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.send({ status: 'failed', desc: error })
+                                                }
 
-                                                    });
-                                                count++
-                                            }
+                                            });
+                                            count++
                                         }
                                     }
+                                }
 
-                                })
                             })
-
                         })
-                    if (count < 1) {
-                        console.log(count)
-                        res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
-                    } else {
-                        console.log(count)
-                        res.send({ status: 'success', desc: `${count} data match`, match_data })
-                    }
+
+                    })
+                if (count < 1) {
+                    console.log(count)
+                    res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
+                } else {
+                    console.log(count)
+                    res.send({ status: 'success', desc: `${count} data match`, match_data })
+                }
 
 
-                } else if (req.file.mimetype.includes("csv")) {
-                    await workbook.csv.readFile(req.file.path)
-                        .then(worksheet => {
-                            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-                                console.log("Row " + rowNumber + " = " + row.values)
-                                if (row.values.includes("OVO", 4)) {
-                                    mysqlCon.query(`
+            } else if (req.file.mimetype.includes("csv")) {
+                await workbook.csv.readFile(req.file.path)
+                    .then(worksheet => {
+                        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                            console.log("Row " + rowNumber + " = " + row.values)
+                            if (row.values.includes("OVO", 4)) {
+                                mysqlCon.query(`
             INSERT INTO transaksi ( 
             merchant_id , merchant_name , channel ,   
             transaction_id , reference_id , tgl_transaksi , 
@@ -255,25 +264,25 @@ async function convertCsvOVO(req, res) {
               ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
               '${row.values[15]}' 
           )`, async function (error, rows, fields) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(400).send('Oops, something happens')
-                                            } else {
-                                                count++
-                                            }
-                                        });
-                                    count++
-                                }
-                            });
-                            res.send(`data : ${count}`)
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(400).send('Oops, something happens')
+                                    } else {
+                                        count++
+                                    }
+                                });
+                                count++
+                            }
                         });
+                        res.send(`data : ${count}`)
+                    });
 
 
-                } else {
-                    res.send("file bukan csv atau xlsx")
-                }
+            } else {
+                res.send("file bukan csv atau xlsx")
             }
-        });
+        }
+    });
 }
 
 async function convertCsvLinkAja(req, res) {
@@ -293,28 +302,28 @@ async function convertCsvLinkAja(req, res) {
                           ) values ( 
                             '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'linkaja'
                           )`, async function (error, rows, fields) {
-            if (error) {
-                res.send({ status: 'failed', desc: error })
-            } else {
-                id_attachment = rows.insertId
-                var count = 0;
-                var match_data = []
-                var workbook = new Excel.Workbook()
-                console.log("type : ", req.file.mimetype)
-                if (req.file.mimetype.includes("spreadsheet")) {
-                    //3.proses perubahan xlsx menjadi array
-                    await workbook.xlsx.readFile(req.file.path)
-                        .then(workbook => {
-                            workbook.eachSheet((sheet, id) => {
-                                sheet.eachRow((row, rowIndex) => {
-                                    console.log(row.values, rowIndex)
-                                    if (row.values.includes("LinkAja", 4)) {
-                                        //4.matching data between dataKonekthing and rows array hasil convert
-                                        for (var i = 0; i < dataKonekthing.length; i++) {
-                                            if (parseInt(dataKonekthing[i].trxId) === parseInt(row.values[6])) {
-                                                console.log('jalan')    
-                                                match_data.push(dataKonekthing[i])
-                                                mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
+        if (error) {
+            res.send({ status: 'failed', desc: error })
+        } else {
+            id_attachment = rows.insertId
+            var count = 0;
+            var match_data = []
+            var workbook = new Excel.Workbook()
+            console.log("type : ", req.file.mimetype)
+            if (req.file.mimetype.includes("spreadsheet")) {
+                //3.proses perubahan xlsx menjadi array
+                await workbook.xlsx.readFile(req.file.path)
+                    .then(workbook => {
+                        workbook.eachSheet((sheet, id) => {
+                            sheet.eachRow((row, rowIndex) => {
+                                console.log(row.values, rowIndex)
+                                if (row.values.includes("LinkAja", 4)) {
+                                    //4.matching data between dataKonekthing and rows array hasil convert
+                                    for (var i = 0; i < dataKonekthing.length; i++) {
+                                        if (parseInt(dataKonekthing[i].trxId) === parseInt(row.values[6])) {
+                                            console.log('jalan')
+                                            match_data.push(dataKonekthing[i])
+                                            mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
                                                     transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
                                                     attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
                                                     ${row.values[2]} , '${row.values[3]}' , 'linkaja' , '${dataKonekthing[i].trxId}' , CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)},
@@ -323,37 +332,37 @@ async function convertCsvLinkAja(req, res) {
                                                     '${dataKonekthing[i].status}', ${parseInt(dataKonekthing[i].amount) * (parameters[0].nilai_parameter)} , 
                                                     ${parseInt(dataKonekthing[i].refNum)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
                                                 )`, async function (error, rows, fields) {
-                                                        if (error) {
-                                                            console.log(error)
-                                                            res.send({ status: 'failed', desc: error })
-                                                        }
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.send({ status: 'failed', desc: error })
+                                                }
 
-                                                    });
-                                                count++
-                                            }
+                                            });
+                                            count++
                                         }
                                     }
+                                }
 
-                                })
                             })
-
                         })
-                    if (count < 1) {
-                        console.log(count)
-                        res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
-                    } else {
-                        console.log(count)
-                        res.send({ status: 'success', desc: `${count} data match`, match_data })
-                    }
+
+                    })
+                if (count < 1) {
+                    console.log(count)
+                    res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
+                } else {
+                    console.log(count)
+                    res.send({ status: 'success', desc: `${count} data match`, match_data })
+                }
 
 
-                } else if (req.file.mimetype.includes("csv")) {
-                    await workbook.csv.readFile(req.file.path)
-                        .then(worksheet => {
-                            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-                                console.log("Row " + rowNumber + " = " + row.values)
-                                if (row.values.includes("LinkAja", 4)) {
-                                    mysqlCon.query(`
+            } else if (req.file.mimetype.includes("csv")) {
+                await workbook.csv.readFile(req.file.path)
+                    .then(worksheet => {
+                        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                            console.log("Row " + rowNumber + " = " + row.values)
+                            if (row.values.includes("LinkAja", 4)) {
+                                mysqlCon.query(`
             INSERT INTO transaksi ( 
             merchant_id , merchant_name , channel ,   
             transaction_id , reference_id , tgl_transaksi , 
@@ -367,25 +376,25 @@ async function convertCsvLinkAja(req, res) {
               ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
               '${row.values[15]}' 
           )`, async function (error, rows, fields) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(400).send('Oops, something happens')
-                                            } else {
-                                                count++
-                                            }
-                                        });
-                                    count++
-                                }
-                            });
-                            res.send(`data : ${count}`)
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(400).send('Oops, something happens')
+                                    } else {
+                                        count++
+                                    }
+                                });
+                                count++
+                            }
                         });
+                        res.send(`data : ${count}`)
+                    });
 
 
-                } else {
-                    res.send("file bukan csv atau xlsx")
-                }
+            } else {
+                res.send("file bukan csv atau xlsx")
             }
-        });
+        }
+    });
 }
 
 async function convertCsvGoPay(req, res) {
@@ -405,28 +414,28 @@ async function convertCsvGoPay(req, res) {
                           ) values ( 
                             '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'gopay'
                           )`, async function (error, rows, fields) {
-            if (error) {
-                res.send({ status: 'failed', desc: error })
-            } else {
-                id_attachment = rows.insertId
-                var count = 0;
-                var match_data = []
-                var workbook = new Excel.Workbook()
-                console.log("type : ", req.file.mimetype)
-                if (req.file.mimetype.includes("spreadsheet")) {
-                    //3.proses perubahan xlsx menjadi array
-                    await workbook.xlsx.readFile(req.file.path)
-                        .then(workbook => {
-                            workbook.eachSheet((sheet, id) => {
-                                sheet.eachRow((row, rowIndex) => {
-                                    console.log(row.values, rowIndex)
-                                    if (row.values.includes("GOPAY", 4)) {
-                                        //4.matching data between dataKonekthing and rows array hasil convert
-                                        for (var i = 0; i < dataKonekthing.length; i++) {
-                                            if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
-                                                console.log('jalan')
-                                                match_data.push(dataKonekthing[i])
-                                                mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
+        if (error) {
+            res.send({ status: 'failed', desc: error })
+        } else {
+            id_attachment = rows.insertId
+            var count = 0;
+            var match_data = []
+            var workbook = new Excel.Workbook()
+            console.log("type : ", req.file.mimetype)
+            if (req.file.mimetype.includes("spreadsheet")) {
+                //3.proses perubahan xlsx menjadi array
+                await workbook.xlsx.readFile(req.file.path)
+                    .then(workbook => {
+                        workbook.eachSheet((sheet, id) => {
+                            sheet.eachRow((row, rowIndex) => {
+                                console.log(row.values, rowIndex)
+                                if (row.values.includes("GOPAY", 4)) {
+                                    //4.matching data between dataKonekthing and rows array hasil convert
+                                    for (var i = 0; i < dataKonekthing.length; i++) {
+                                        if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
+                                            console.log('jalan')
+                                            match_data.push(dataKonekthing[i])
+                                            mysqlCon.query(`SET sql_mode = '';INSERT INTO transaction ( merchant_id , merchant_name , channel ,   
                                                     transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
                                                     attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, bill_reff, nama_rekening_penerima) values ( 
                                                     ${row.values[2]} , '${row.values[3]}' , 'gopay' , '${dataKonekthing[i].transaction_id}' , CAST('${dataKonekthing[i].transaction_time}' AS datetime) , ${parseInt(dataKonekthing[i].gross_amount)},
@@ -435,37 +444,37 @@ async function convertCsvGoPay(req, res) {
                                                     '${dataKonekthing[i].payment_status_desc}', ${parseInt(dataKonekthing[i].payment_total) * (parameters[0].nilai_parameter)} , 
                                                     ${parseInt(dataKonekthing[i].id_gopay)}, "${dataKonekthing[i].masjid_pemilik_rekening}"
                                                 )`, async function (error, rows, fields) {
-                                                        if (error) {
-                                                            console.log(error)
-                                                            res.send({ status: 'failed', desc: error })
-                                                        }
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.send({ status: 'failed', desc: error })
+                                                }
 
-                                                    });
-                                                count++
-                                            }
+                                            });
+                                            count++
                                         }
                                     }
+                                }
 
-                                })
                             })
-
                         })
-                    if (count < 1) {
-                        console.log(count)
-                        res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
-                    } else {
-                        console.log(count)
-                        res.send({ status: 'success', desc: `${count} data match`, match_data })
-                    }
+
+                    })
+                if (count < 1) {
+                    console.log(count)
+                    res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
+                } else {
+                    console.log(count)
+                    res.send({ status: 'success', desc: `${count} data match`, match_data })
+                }
 
 
-                } else if (req.file.mimetype.includes("csv")) {
-                    await workbook.csv.readFile(req.file.path)
-                        .then(worksheet => {
-                            worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-                                console.log("Row " + rowNumber + " = " + row.values)
-                                if (row.values.includes("OVO", 4)) {
-                                    mysqlCon.query(`
+            } else if (req.file.mimetype.includes("csv")) {
+                await workbook.csv.readFile(req.file.path)
+                    .then(worksheet => {
+                        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
+                            console.log("Row " + rowNumber + " = " + row.values)
+                            if (row.values.includes("OVO", 4)) {
+                                mysqlCon.query(`
             INSERT INTO transaksi ( 
             merchant_id , merchant_name , channel ,   
             transaction_id , reference_id , tgl_transaksi , 
@@ -479,25 +488,25 @@ async function convertCsvGoPay(req, res) {
               ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
               '${row.values[15]}' 
           )`, async function (error, rows, fields) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(400).send('Oops, something happens')
-                                            } else {
-                                                count++
-                                            }
-                                        });
-                                    count++
-                                }
-                            });
-                            res.send(`data : ${count}`)
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(400).send('Oops, something happens')
+                                    } else {
+                                        count++
+                                    }
+                                });
+                                count++
+                            }
                         });
+                        res.send(`data : ${count}`)
+                    });
 
 
-                } else {
-                    res.send("file bukan csv atau xlsx")
-                }
+            } else {
+                res.send("file bukan csv atau xlsx")
             }
-        });
+        }
+    });
 }
 
 function getAllAttachment(req, res) {
@@ -555,10 +564,10 @@ function getDataSummary(req, res) {
 
 }
 
-function addParam(req,res) {
+function addParam(req, res) {
 
-    var sql = `INSERT INTO parameter (nama_parameter, nilai_parameter, channel)
-                VALUES('${req.body.nama_parameter}','${req.body.nilai_parameter}','${req.body.channel}')`
+    var sql = `INSERT INTO parameter (nama_parameter, nilai_parameter, channel, isDeleted)
+                VALUES('${req.body.nama_parameter}','${req.body.nilai_parameter}','${req.body.channel}', 0)`
 
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
@@ -570,13 +579,13 @@ function addParam(req,res) {
 }
 
 function updateParam(req, res) {
-    const sql = `UPDATE parameter 
+    var sql = `UPDATE parameter 
                             SET
                             nama_parameter = '${req.body.nama_parameter}' , 
                             nilai_parameter = '${req.body.nilai_parameter}' , 
                             channel = '${req.body.channel}' 
 	                                WHERE
-                                    id_parameter = '${req.body.id_parameter}' `;
+                                    id_parameter = '${req.params.id_parameter}' `;
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
             res.send({ status: "error", desc: error })
@@ -602,6 +611,33 @@ function paramsRemove(req, res) {
 function getParams(req, res) {
 
     var sql = `SELECT  * from parameter `;
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            console.log(error)
+        } else {
+            res.send(rows)
+        }
+    });
+}
+
+function getParamsDetail(req, res) {
+
+    var sql = `SELECT * from parameter p
+                WHERE p.id_parameter = '${req.params.id_parameter}' `;
+
+    mysqlCon.query(sql, function (error, rows, fields) {
+        if (error) {
+            console.log(error)
+        } else {
+            res.send(rows)
+        }
+    });
+}
+
+function getParamsInput(req, res) {
+
+    const sql = `SELECT p.id_parameter, p.channel FROM parameter p`
 
     mysqlCon.query(sql, function (error, rows, fields) {
         if (error) {
