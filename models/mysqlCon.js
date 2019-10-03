@@ -1,6 +1,8 @@
 var mysql = require('mysql');
 
-var con = mysql.createConnection({
+//- Connection configuration
+var con  = mysql.createPool({
+  connectionLimit : 10,
   host: "35.247.172.123",
   port: "3306",
   user: "root",
@@ -8,10 +10,6 @@ var con = mysql.createConnection({
   database: "rekonsil",
   multipleStatements: true
 });
-
-con.connect(function (err){
-    if(err) throw err;
-})
 
 
 module.exports = con;
