@@ -41,8 +41,8 @@ router.post('/upload/gopay', upload.single('file'), (req, res) => {
 });
 
 //show data summary sesuai semua data yg pertama dimunculkan
-router.get('/get/datasummary/', (req, res) => {
-    getDataSummary(req, res)
+router.get('/get/rekap/', (req, res) => {
+    getRekap(req, res)
 });
 
 //show data semua sesuai attachment yg dipilih
@@ -50,12 +50,12 @@ router.get('/get/databyattachment/:attachment_id/:channel', (req, res) => {
     getAllDataByAttachment(req, res)
 });
 
-router.get('/get/allattachment/:channel', (req, res) => {
-    getAllAttachment(req, res)
-});
+// router.get('/get/allattachment/:channel', (req, res) => {
+//     getAllAttachment(req, res)
+// });
 
-router.get('/get/alldata', (req, res) => {
-    getAllData(req, res)
+router.get('/get/alldata/:channel', (req, res) => {
+    getAllDataByChannel(req, res)
 });
 
 // add params
@@ -199,89 +199,111 @@ async function convertCsvOVO(req, res) {
     //get parameter for shared fee
     var parameters = await getParameter('ovo');
 
-    var id_attachment = 0
 
-    //2.insert to db table attachment, channel disesuain 
-    await mysqlCon.query(`
+    if (req.file.mimetype.includes("spreadsheet")) {
+        await mysqlCon.query(`
                         INSERT INTO attachment ( 
                             attachment_name , import_at , ext_name , channel
                           ) values ( 
                             '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'ovo'
-                          )`, async function (error, rows, fields) {
-        if (error) {
-            res.send({ status: 'failed', desc: error })
-        } else {
-            id_attachment = rows.insertId
+                          )`, function (error, rows, fields) {
+            var matchcount = 0;
             var count = 0;
-            var match_data = []
-            var workbook = new Excel.Workbook()
-            console.log("type : ", req.file.mimetype)
-            if (req.file.mimetype.includes("spreadsheet")) {
+            if (error) {
+                res.send({ status: 'failed', desc: error })
+            } else {
+
+                var workbook = new Excel.Workbook()
+                console.log("type : ", req.file.mimetype)
                 //3.proses perubahan xlsx menjadi array
-                await workbook.xlsx.readFile(req.file.path)
+                workbook.xlsx.readFile(req.file.path)
                     .then(workbook => {
                         workbook.eachSheet((sheet, id) => {
                             sheet.eachRow((row, rowIndex) => {
                                 console.log(row.values, rowIndex)
+
                                 if (row.values.includes("OVO", 4)) {
-                                    console.log("Insert data import")
+                                    console.log("ada ovonya")
                                     //4.matching data between dataKonekthing and rows array hasil convert
-                                    mysqlCon.query(`SET sql_mode = '';
-                                    INSERT INTO transaction_import ( 
-                                    channel , transaction_id , bill_no , reference_id , transaction_date , 
-                                      payment_date , amount , payment_amount ,
-                                      attachment_id , status, isSame
-                                  ) values ( 
-                                    '${row.values[4]}' , '${row.values[5]}' ,${parseInt(row.values[6])} , '${row.values[7]}' , CAST('${row.values[11]}' AS datetime) ,  
-                                      CAST('${row.values[12]}' AS datetime) , ${parseInt(row.values[13])} , ${parseInt(row.values[14])} , 
-                                      ${id_attachment} , '${row.values[15]}' , 0
-                                  )`, async function (error, rows, fields) {
+                                    mysqlCon.query(`
+                                    INSERT INTO transaction_import ( channel , transaction_id , bill_no , reference_id , transaction_date , 
+                                        payment_date , amount , payment_amount ,
+                                        status, isSame)
+                                    SELECT * FROM (SELECT  '${row.values[4]}' as channel , '${row.values[5]}' as transaction_id ,${parseInt(row.values[6])} as bill_no , '${row.values[7]}' as reference_id , CAST('${row.values[11]}' AS datetime) as transaction_date,  
+                                    CAST('${row.values[12]}' AS datetime) as payment_date , ${parseInt(row.values[13])} as amount , ${parseInt(row.values[14])} as payment_amount, 
+                                   '${row.values[15]}' as status , 0 as isSame) AS tmp
+                                    WHERE NOT EXISTS (
+                                    SELECT transaction_id FROM transaction_import WHERE transaction_id = '${row.values[5]}'  
+                                    ) LIMIT 1`, function (error, rows, fields) {
+                                        console.log("data import masuk")
                                         if (error) {
                                             console.log(error)
                                         } else {
+                                            console.log(rows.insertId, "insert file import")
+                                            if (rows.insertId !== 0) {
+
+                                                count++
+                                                console.log("Count insert import bertambah", count)
+                                            }
+
                                             for (var i = 0; i < dataKonekthing.length; i++) {
+
                                                 if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
-                                                    console.log('Insert data muslimpocket')
-                                                    match_data.push(dataKonekthing[i])
 
                                                     //insert data muslimpocket yang sama
-                                                    mysqlCon.query(`INSERT INTO transaction ( bill_reff, sender , receiver , channel ,   
-                                                                                    transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
-                                                                                    attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, nama_rekening_penerima, export_bank) values ( 
-                                                                                    ${parseInt(dataKonekthing[i].bill_reff)}, '${dataKonekthing[i].username_pengirim_ovo}' , '${dataKonekthing[i].username_penerima_ovo}' , 'ovo' , '${dataKonekthing[i].trx_id}' , CAST('${dataKonekthing[i].bill_date}' AS datetime) , ${parseInt(dataKonekthing[i].payment_total)},
-                                                                                    CAST('${dataKonekthing[i].payment_date}' AS datetime) , ${parseInt(dataKonekthing[i].bill_total)} , ${id_attachment} , 
-                                                                                    "${dataKonekthing[i].masjid_nama}" , '${dataKonekthing[i].bank_nama}' , '${dataKonekthing[i].masjid_no_rekening}' , 
-                                                                                    '${dataKonekthing[i].payment_status_desc}', ${parseInt(dataKonekthing[i].payment_total) * (parameters[0].nilai_parameter)} , 
-                                                                                    "${dataKonekthing[i].masjid_pemilik_rekening}", "F"
-                                                                                )`, async function (error, rows, fields) {
+                                                    mysqlCon.query(`
+                                                    INSERT INTO transaction_mp ( bill_no, sender , receiver , channel ,   
+                                                        transaction_id , tgl_transaksi , tgl_pembayaran , total_amount , total_pembayaran,
+                                                       nama_penerima ,  bank_penerima , no_rekening_penerima, nama_rekening_penerima, status, isTransfer)
+                                                    SELECT * 
+                                                    FROM (
+                                                        SELECT  ${parseInt(dataKonekthing[i].bill_reff)} as bill_no, '${dataKonekthing[i].username_pengirim_ovo}' as sender , '${dataKonekthing[i].username_penerima_ovo}' as receiver , 'ovo' as channel , '${dataKonekthing[i].trx_id}' as transaction_id , CAST('${dataKonekthing[i].bill_date}' AS datetime) as tgl_transaksi ,
+                                                        CAST('${dataKonekthing[i].payment_date}' AS datetime) as tgl_pembayaran  , ${parseInt(dataKonekthing[i].bill_total)} as total_amount , ${parseInt(dataKonekthing[i].payment_total)} as total_pembayaran,
+                                                     "${dataKonekthing[i].masjid_nama}" as nama_penerima , '${dataKonekthing[i].bank_nama}' as bank_penerima , '${dataKonekthing[i].masjid_no_rekening}' as no_rekening_penerima , "${dataKonekthing[i].masjid_pemilik_rekening}" as nama_rekening_penerima, 
+                                                     '${dataKonekthing[i].payment_status_desc}' as status, "F" as isTransfer) AS tmp
+                                                    WHERE NOT EXISTS (
+                                                    SELECT transaction_id 
+                                                    FROM transaction_mp 
+                                                    WHERE transaction_id = '${dataKonekthing[i].trx_id}' 
+                                                    ) 
+                                                    LIMIT 1`, function (error, rows, fields) {
+                                                        console.log("data import masuk")
                                                         if (error) {
                                                             console.log(error)
 
                                                         } else {
-                                                            console.log(rows, "update yang sama")
-                                                            mysqlCon.query(`SET sql_mode = '';
-                                                                            UPDATE transaction_import SET isSame = 1
-                                                                            WHERE bill_no = ${row.values[6]}`,
-                                                                async function (error, rows, fields) {
+                                                            if (rows.insertId !== 0) {
+                                                                matchcount++
+                                                                console.log("Count insert mp bertambah", matchcount)
+
+                                                            }
+                                                            console.log(rows.insertId, "insert yang sama")
+                                                            mysqlCon.query(`UPDATE transaction_import 
+                                                                            SET isSame = 1
+                                                                WHERE bill_no = ${row.values[6]}`,
+                                                                function (error, rows, fields) {
+                                                                    console.log("update yang sama")
                                                                     if (error) {
                                                                         console.log(error)
 
-                                                                    } else {
-                                                                        console.log(rows)
-                                                                    }
+                                                                    } 
                                                                 });
 
                                                         }
 
                                                     });
 
-                                                    //insert data import yang sama
 
-                                                    count++
+
                                                 }
                                             }
+
                                         }
                                     });
+
+
+                                    console.log("ini data masuk", count)
+                                    console.log("ini data sama", matchcount)
 
                                 }
 
@@ -289,54 +311,19 @@ async function convertCsvOVO(req, res) {
                         })
 
                     })
-                if (count < 1) {
-                    console.log(count)
-                    res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
-                } else {
-                    console.log(count)
-                    res.send({ status: 'success', desc: `${count} data match`, match_data })
-                }
 
+                console.log(`${count} data masuk, ${matchcount} data sama`)
+                res.send({ status: 'success', desc: `${count} data masuk, ${matchcount} data sama` })
 
-            } else if (req.file.mimetype.includes("csv")) {
-                await workbook.csv.readFile(req.file.path)
-                    .then(worksheet => {
-                        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-                            console.log("Row " + rowNumber + " = " + row.values)
-                            if (row.values.includes("OVO", 4)) {
-                                mysqlCon.query(`
-            INSERT INTO transaksi ( 
-            merchant_id , merchant_name , channel ,   
-            transaction_id , reference_id , tgl_transaksi , 
-              tgl_pembayaran , amount , total_amount ,
-              attachment_id , customer_email ,  customer_name ,
-              status
-          ) values ( 
-              ${row.values[2]} , '${row.values[3]}' , '${row.values[4]}' , 
-              ${row.values[5]} , ${row.values[6]} , '${row.values[11]}',  
-              '${row.values[12]}' , ${row.values[13]} , ${row.values[14]} , 
-              ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
-              '${row.values[15]}' 
-          )`, async function (error, rows, fields) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(400).send('Oops, something happens')
-                                    } else {
-                                        count++
-                                    }
-                                });
-                                count++
-                            }
-                        });
-                        res.send(`data : ${count}`)
-                    });
-
-
-            } else {
-                res.send("file bukan csv atau xlsx")
             }
-        }
-    });
+        });
+
+
+
+    } else {
+        res.status(500).send({ status: 'failed', desc: "Tipe file bukan xlsx" })
+    }
+
 }
 
 async function convertCsvLinkAja(req, res) {
@@ -616,61 +603,34 @@ async function convertCsvGoPay(req, res) {
     });
 }
 
-function getAllAttachment(req, res) {
+// function getAllAttachment(req, res) {
 
-    var sql = `SELECT  * from attachment WHERE channel = '${req.params.channel}'`;
+//     var sql = `SELECT  * from attachment WHERE channel = '${req.params.channel}'`;
 
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            res.send(rows)
-        }
-    });
-}
+//     mysqlCon.query(sql, function (error, rows, fields) {
+//         if (error) {
+//             console.log(error)
+//         } else {
+//             res.send(rows)
+//         }
+//     });
+// }
 
-const getDataMPByAttachmentID = (id, channel) => {
+const getDataMPByChannel = channel => {
     return new Promise(resolve => {
-        if(channel === "ovo"){
-            var sql = `SELECT  * from transaction tr
-            WHERE tr.attachment_id = '${id}'
-            ORDER BY tr.bill_reff ASC `;
-        }else if(channel === "linkaja"){
-            var sql = `SELECT  * from transaction tr
-            WHERE tr.attachment_id = '${id}'
-            ORDER BY tr.tgl_pembayaran ASC `;
-        }else{
-            var sql = `SELECT  * from transaction tr
-            WHERE tr.attachment_id = '${id}' `;
-        }
-       
-        console.log(sql)
-        mysqlCon.query(sql,
-            function (error, rows, fields) {
-                if (error) {
-                    console.log(error)
-                } else {
-                    resolve(rows);
-                }
-            });
-    });
-}
-
-const getDataImportByAttachmentID = (id,channel) => {
-    return new Promise(resolve => {
-        if(channel === "ovo"){
-            var sql =  `SELECT  * from transaction_import tr
-            WHERE tr.attachment_id = '${id}'
+        if (channel === "ovo") {
+            var sql = `SELECT  * from transaction_mp tr
+            WHERE tr.channel = '${channel}'
             ORDER BY tr.bill_no ASC `;
-        }else if(channel === "linkaja"){
-            var sql = `SELECT  * from transaction_import tr
-            WHERE tr.attachment_id = '${id}'
-            ORDER BY tr.payment_date ASC `;
-        }else{
-            var sql = `SELECT  * from transaction_import tr
-            WHERE tr.attachment_id = '${id}' `;
+        } else if (channel === "linkaja") {
+            var sql = `SELECT  * from transaction_mp tr
+            WHERE tr.channel = '${channel}'
+            ORDER BY tr.tgl_pembayaran ASC `;
+        } else {
+            var sql = `SELECT  * from transaction_mp tr
+            WHERE tr.channel = '${channel}' `;
         }
-       ;
+
         console.log(sql)
         mysqlCon.query(sql,
             function (error, rows, fields) {
@@ -683,10 +643,37 @@ const getDataImportByAttachmentID = (id,channel) => {
     });
 }
 
-const getNominalDataImport = id => {
+const getDataImportByChannel = channel => {
+    return new Promise(resolve => {
+        if (channel === "ovo") {
+            var sql = `SELECT  * from transaction_import tr
+            WHERE tr.channel = '${channel}'
+            ORDER BY tr.bill_no ASC `;
+        } else if (channel === "linkaja") {
+            var sql = `SELECT  * from transaction_import tr
+            WHERE tr.channel = '${channel}'
+            ORDER BY tr.payment_date ASC `;
+        } else {
+            var sql = `SELECT  * from transaction_import tr
+            WHERE tr.channel = '${channel}' `;
+        }
+
+        console.log(sql)
+        mysqlCon.query(sql,
+            function (error, rows, fields) {
+                if (error) {
+                    console.log(error)
+                } else {
+                    resolve(rows);
+                }
+            });
+    });
+}
+
+const getNominalDataImport = channel => {
     return new Promise(resolve => {
         var sql = `SELECT IFNULL(COUNT(id),0) as jumlah_transaksi, IFNULL(SUM(tr.payment_amount),0) as amount from transaction_import tr
-        WHERE tr.attachment_id = '${id}' `;
+        WHERE tr.channel = '${channel}' `;
         console.log(sql)
         mysqlCon.query(sql,
             function (error, rows, fields) {
@@ -699,10 +686,10 @@ const getNominalDataImport = id => {
     });
 }
 
-const getNominalDataMP = id => {
+const getNominalDataMP = channel => {
     return new Promise(resolve => {
-        var sql = `SELECT IFNULL(COUNT(id),0) as jumlah_transaksi, IFNULL(SUM(tr.total_pembayaran),0) as amount from transaction tr
-        WHERE tr.attachment_id = '${id}' `;
+        var sql = `SELECT IFNULL(COUNT(id),0) as jumlah_transaksi, IFNULL(SUM(tr.total_pembayaran),0) as amount from transaction_mp tr
+        WHERE tr.channel = '${channel}' `;
         console.log(sql)
         mysqlCon.query(sql,
             function (error, rows, fields) {
@@ -715,46 +702,79 @@ const getNominalDataMP = id => {
     });
 }
 
-async function getAllDataByAttachment(req, res) {
+async function getAllDataByChannel(req, res) {
 
-    const dataMP = await getDataMPByAttachmentID(req.params.attachment_id,req.params.channel)
-    const dataImport = await getDataImportByAttachmentID(req.params.attachment_id,req.params.channel)
-    const nominalImport = await getNominalDataImport(req.params.attachment_id)
-    const nominalMP = await getNominalDataMP(req.params.attachment_id)
+    const dataMP = await getDataMPByChannel(req.params.channel)
+    const dataImport = await getDataImportByChannel(req.params.channel)
+    const nominalImport = await getNominalDataImport(req.params.channel)
+    const nominalMP = await getNominalDataMP(req.params.channel)
 
     if (dataMP && dataImport && nominalImport && nominalMP) {
         res.send({ data_MP: dataMP, data_Import: dataImport, nominal_Import: nominalImport, nominal_MP: nominalMP })
     }
 }
 
-function getAllData(req, res) {
-
-    var sql = `SELECT  tr.nama_rekening_penerima, tr.bank_penerima, tr.no_rekening_penerima, tr.total_pembayaran 
-    FROM transaction tr
-    WHERE tr.status LIKE '%Sukses%' `;
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            res.send(rows)
-        }
+const getRekapBank = () => {
+    return new Promise(resolve => {
+        const sql = `SELECT DATE_FORMAT(tr.tgl_pembayaran,"%Y-%m-%d") as pembayaran_tgl, tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
+        FROM transaction_mp tr
+        GROUP BY DATE_FORMAT(tr.tgl_pembayaran,"%Y-%m-%d")  , tr.bank_penerima
+        ORDER BY tr.tgl_pembayaran`;
+        console.log(sql)
+        mysqlCon.query(sql,
+            function (error, rows, fields) {
+                if (error) {
+                    console.log(error)
+                } else {
+                    resolve(rows);
+                }
+            });
     });
 }
 
-function getDataSummary(req, res) {
-    const sql = `SELECT DATE_FORMAT(tr.tgl_transaksi, "%Y-%m-%d") as tgl_transaksi, tr.bank_penerima, count(tr.bank_penerima) as jumlah_transaksi, SUM(tr.total_amount) as nominal_transaksi
-    FROM transaction tr
-    GROUP BY tr.tgl_transaksi, tr.bank_penerima
-    ORDER BY tr.tgl_transaksi`;
-
-    mysqlCon.query(sql, function (error, rows, fields) {
-        if (error) {
-            console.log(error)
-        } else {
-            res.send(rows)
-        }
+const getRakapTrImport = () => {
+    return new Promise(resolve => {
+        const sql = `SELECT *
+        FROM transaction_import tr
+        ORDER BY tr.payment_date ASC`;
+        console.log(sql)
+        mysqlCon.query(sql,
+            function (error, rows, fields) {
+                if (error) {
+                    console.log(error)
+                } else {
+                    resolve(rows);
+                }
+            });
     });
+}
 
+const getRakapTrMP = () => {
+    return new Promise(resolve => {
+        const sql = `SELECT *
+        FROM transaction_mp tr
+        ORDER BY tr.tgl_pembayaran ASC `;
+        console.log(sql)
+        mysqlCon.query(sql,
+            function (error, rows, fields) {
+                if (error) {
+                    console.log(error)
+                } else {
+                    resolve(rows);
+                }
+            });
+    });
+}
+
+async function getRekap(req, res) {
+
+    const dataRekapBank =  await getRekapBank();
+    const dataRekapImport = await getRakapTrImport();
+    const dataRekapMP = await getRakapTrMP();
+
+    if (dataRekapBank && dataRekapImport && dataRekapMP) {
+        res.send({ rekap_MP: dataRekapMP, rekap_Import: dataRekapImport, rekap_bank: dataRekapBank })
+    }
 }
 
 async function exportCSV(req, res) {
