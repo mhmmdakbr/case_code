@@ -206,22 +206,21 @@ async function convertCsvOVO(req, res) {
     var dataKonekthing = await getDataKonekthing('ovo');
 
     //get parameter for shared fee
-    var parameters = await getParameter('ovo');
+    // var parameters = await getParameter('ovo');
 
 
     if (req.file.mimetype.includes("spreadsheet")) {
         await mysqlCon.query(`
-                        INSERT INTO attachment ( 
-                            attachment_name , import_at , ext_name , channel
-                          ) values ( 
-                            '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'ovo'
-                          )`, function (error, rows, fields) {
+                       INSERT INTO attachment ( 
+                           attachment_name , import_at , ext_name , channel
+                         ) values ( 
+                           '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'ovo'
+                         )`, function (error, rows, fields) {
             var matchcount = 0;
             var count = 0;
             if (error) {
                 res.send({ status: 'failed', desc: error })
-            } else {
-
+            } 
                 var workbook = new Excel.Workbook()
                 console.log("type : ", req.file.mimetype)
                 //3.proses perubahan xlsx menjadi array
@@ -235,79 +234,73 @@ async function convertCsvOVO(req, res) {
                                     console.log("ada ovonya")
                                     //4.matching data between dataKonekthing and rows array hasil convert
                                     mysqlCon.query(`
-                                    INSERT INTO transaction_import ( channel , transaction_id , bill_no , reference_id , transaction_date , 
-                                        payment_date , amount , payment_amount ,
-                                        status, isSame)
-                                    SELECT * FROM (SELECT  '${row.values[4]}' as channel , '${row.values[5]}' as transaction_id ,${parseInt(row.values[6])} as bill_no , '${row.values[7]}' as reference_id , CAST('${row.values[11]}' AS datetime) as transaction_date,  
-                                    CAST('${row.values[12]}' AS datetime) as payment_date , ${parseInt(row.values[13])} as amount , ${parseInt(row.values[14])} as payment_amount, 
-                                   '${row.values[15]}' as status , 0 as isSame) AS tmp
-                                    WHERE NOT EXISTS (
-                                    SELECT transaction_id FROM transaction_import WHERE transaction_id = '${row.values[5]}'  
-                                    ) LIMIT 1`, function (error, rows, fields) {
+                                   INSERT INTO transaction_import ( channel , transaction_id , bill_no , reference_id , transaction_date , 
+                                       payment_date , amount , payment_amount ,
+                                       status, isSame , imported_at, updated_at)
+                                   SELECT * FROM (SELECT  '${row.values[4]}' as channel , '${row.values[5]}' as transaction_id ,${parseInt(row.values[6])} as bill_no , '${row.values[7]}' as reference_id , CAST('${row.values[11]}' AS datetime) as transaction_date,  
+                                   CAST('${row.values[12]}' AS datetime) as payment_date , ${parseInt(row.values[13])} as amount , ${parseInt(row.values[14])} as payment_amount, 
+                                  '${row.values[15]}' as status , 0 as isSame, NOW() as imported_at, NOW() as updated_at) AS tmp
+                                   WHERE NOT EXISTS (
+                                   SELECT transaction_id FROM transaction_import WHERE transaction_id = '${row.values[5]}' AND channel = 'OVO'
+                                   ) LIMIT 1`, function (error, rows, fields) {
                                         console.log("data import masuk")
                                         if (error) {
                                             console.log(error)
-                                        } else {
-                                            console.log(rows.insertId, "insert file import")
-                                            if (rows.insertId !== 0) {
+                                        }
+                                        console.log(rows.insertId, "insert file import")
+                                        if (rows.insertId !== 0) {
 
-                                                count++
-                                                console.log("Count insert import bertambah", count)
-                                            }
+                                            count++
+                                            console.log("Count insert import bertambah", count)
+                                        }
 
-                                            for (var i = 0; i < dataKonekthing.length; i++) {
+                                        for (var i = 0; i < dataKonekthing.length; i++) {
 
-                                                if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
+                                            if (parseInt(dataKonekthing[i].bill_no) === parseInt(row.values[6])) {
 
-                                                    //insert data muslimpocket yang sama
-                                                    mysqlCon.query(`
-                                                    INSERT INTO transaction_mp ( bill_no, sender , receiver , channel ,   
-                                                        transaction_id , tgl_transaksi , tgl_pembayaran , total_amount , total_pembayaran,
-                                                       nama_penerima ,  bank_penerima , no_rekening_penerima, nama_rekening_penerima, status, isTransfer)
-                                                    SELECT * 
-                                                    FROM (
-                                                        SELECT  ${parseInt(dataKonekthing[i].bill_reff)} as bill_no, '${dataKonekthing[i].username_pengirim_ovo}' as sender , '${dataKonekthing[i].username_penerima_ovo}' as receiver , 'ovo' as channel , '${dataKonekthing[i].trx_id}' as transaction_id , CAST('${dataKonekthing[i].bill_date}' AS datetime) as tgl_transaksi ,
-                                                        CAST('${dataKonekthing[i].payment_date}' AS datetime) as tgl_pembayaran  , ${parseInt(dataKonekthing[i].bill_total)} as total_amount , ${parseInt(dataKonekthing[i].payment_total)} as total_pembayaran,
-                                                     "${dataKonekthing[i].masjid_nama}" as nama_penerima , '${dataKonekthing[i].bank_nama}' as bank_penerima , '${dataKonekthing[i].masjid_no_rekening}' as no_rekening_penerima , "${dataKonekthing[i].masjid_pemilik_rekening}" as nama_rekening_penerima, 
-                                                     '${dataKonekthing[i].payment_status_desc}' as status, "F" as isTransfer) AS tmp
-                                                    WHERE NOT EXISTS (
-                                                    SELECT transaction_id 
-                                                    FROM transaction_mp 
-                                                    WHERE transaction_id = '${dataKonekthing[i].trx_id}' 
-                                                    ) 
-                                                    LIMIT 1`, function (error, rows, fields) {
-                                                        console.log("data import masuk")
-                                                        if (error) {
-                                                            console.log(error)
+                                                //insert data muslimpocket yang sama
+                                                mysqlCon.query(`
+                                                   INSERT INTO transaction_mp ( bill_no, sender , receiver , channel ,   
+                                                       transaction_id , tgl_transaksi , tgl_pembayaran , total_amount , total_pembayaran,
+                                                      nama_penerima ,  bank_penerima , no_rekening_penerima, nama_rekening_penerima, status, isTransfer, imported_at, updated_at)
+                                                   SELECT * 
+                                                   FROM (
+                                                       SELECT  ${parseInt(dataKonekthing[i].bill_reff)} as bill_no, '${dataKonekthing[i].username_pengirim_ovo}' as sender , '${dataKonekthing[i].username_penerima_ovo}' as receiver , 'ovo' as channel , '${dataKonekthing[i].trx_id}' as transaction_id , CAST('${dataKonekthing[i].bill_date}' AS datetime) as tgl_transaksi ,
+                                                       CAST('${dataKonekthing[i].payment_date}' AS datetime) as tgl_pembayaran  , ${parseInt(dataKonekthing[i].bill_total)} as total_amount , ${parseInt(dataKonekthing[i].payment_total)} as total_pembayaran,
+                                                    "${dataKonekthing[i].masjid_nama}" as nama_penerima , '${dataKonekthing[i].bank_nama}' as bank_penerima , '${dataKonekthing[i].masjid_no_rekening}' as no_rekening_penerima , "${dataKonekthing[i].masjid_pemilik_rekening}" as nama_rekening_penerima, 
+                                                    '${dataKonekthing[i].payment_status_desc}' as status, "F" as isTransfer, NOW() as imported_at, NOW() as updated_at) AS tmp
+                                                   WHERE NOT EXISTS (
+                                                   SELECT transaction_id 
+                                                   FROM transaction_mp 
+                                                   WHERE transaction_id = '${dataKonekthing[i].trx_id}' AND channel = 'ovo'
+                                                   ) 
+                                                   LIMIT 1`, function (error, rows, fields) {
+                                                    console.log("data import masuk")
+                                                    if (error) {
+                                                        console.log(error)
 
-                                                        } else {
-                                                            if (rows.insertId !== 0) {
-                                                                matchcount++
-                                                                console.log("Count insert mp bertambah", matchcount)
+                                                    }
+                                                    if (rows.insertId !== 0) {
+                                                        matchcount++
+                                                        console.log("Count insert mp bertambah", matchcount)
+
+                                                    }
+                                                    console.log(rows.insertId, "insert yang sama")
+                                                    mysqlCon.query(`UPDATE transaction_import 
+                                                                           SET isSame = 1 , updated_at = NOW()
+                                                               WHERE (bill_no = ${row.values[6]} AND channel = 'OVO') AND isSame = 0`,
+                                                        function (error, rows, fields) {
+                                                            console.log("update yang sama")
+                                                            if (error) {
+                                                                console.log(error)
 
                                                             }
-                                                            console.log(rows.insertId, "insert yang sama")
-                                                            mysqlCon.query(`UPDATE transaction_import 
-                                                                            SET isSame = 1
-                                                                WHERE bill_no = ${row.values[6]}`,
-                                                                function (error, rows, fields) {
-                                                                    console.log("update yang sama")
-                                                                    if (error) {
-                                                                        console.log(error)
-
-                                                                    } 
-                                                                });
-
-                                                        }
-
-                                                    });
-
-
-
-                                                }
+                                                        });
+                                                });
                                             }
-
                                         }
+
+
                                     });
 
 
@@ -324,7 +317,7 @@ async function convertCsvOVO(req, res) {
                 console.log(`${count} data masuk, ${matchcount} data sama`)
                 res.send({ status: 'success', desc: `${count} data masuk, ${matchcount} data sama` })
 
-            }
+            
         });
 
 
@@ -332,6 +325,9 @@ async function convertCsvOVO(req, res) {
     } else {
         res.status(500).send({ status: 'failed', desc: "Tipe file bukan xlsx" })
     }
+
+
+
 
 }
 
@@ -342,25 +338,20 @@ async function convertCsvLinkAja(req, res) {
 
     //get parameter for shared fee
     var parameters = await getParameter('linkaja');
+    if (req.file.mimetype.includes("spreadsheet")) {
+        await mysqlCon.query(`
+        INSERT INTO attachment ( 
+            attachment_name , import_at , ext_name , channel
+          ) values ( 
+            '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'linkaja'
+          )`, async function (error, rows, fields) {
+            if (error) {
+                res.send({ status: 'failed', desc: error })
+            } 
+                var count = 0;
+                var workbook = new Excel.Workbook()
+                console.log("type : ", req.file.mimetype)
 
-    var id_attachment = 0
-
-    //2.insert to db table attachment, channel disesuain 
-    await mysqlCon.query(`
-                        INSERT INTO attachment ( 
-                            attachment_name , import_at , ext_name , channel
-                          ) values ( 
-                            '${req.file.filename}' , NOW() , '${req.file.mimetype}', 'linkaja'
-                          )`, async function (error, rows, fields) {
-        if (error) {
-            res.send({ status: 'failed', desc: error })
-        } else {
-            id_attachment = rows.insertId
-            var count = 0;
-            var match_data = []
-            var workbook = new Excel.Workbook()
-            console.log("type : ", req.file.mimetype)
-            if (req.file.mimetype.includes("spreadsheet")) {
                 //3.proses perubahan xlsx menjadi array
                 await workbook.xlsx.readFile(req.file.path)
                     .then(workbook => {
@@ -379,69 +370,66 @@ async function convertCsvLinkAja(req, res) {
                                     var date2 = datetime2[0].split("/").reverse().join("-")
                                     var newdatetime2 = date2.concat(" ", datetime2[1])
                                     //4.matching data between dataKonekthing and rows array hasil convert
-                                    await mysqlCon.query(`SET sql_mode = '';
-                                    INSERT INTO transaction_import ( 
-                                    channel , transaction_id , bill_no , reference_id , transaction_date , 
-                                      payment_date , amount , payment_amount ,
-                                      attachment_id , status, isSame
-                                  ) values ( 
-                                    'LINKAJA' , '${row.values[1]}' ,0 , '${row.values[1]}' , CAST('${newdatetime1}' AS datetime) ,  
-                                      CAST('${newdatetime2}' AS datetime) , ${parseInt(row.values[7])} , ${parseInt(row.values[7])} , 
-                                      ${id_attachment} , '${row.values[5]}' , 0
-                                  )`, async function (error, rows, fields) {
+                                    await mysqlCon.query(`INSERT INTO transaction_import ( channel , transaction_id , bill_no , reference_id , transaction_date , payment_date , amount , payment_amount , status, isSame, imported_at, updated_at)
+                    SELECT * FROM (SELECT  'LINKAJA' as channel , '${row.values[1]}' as transaction_id , 0 as bill_no , 
+                    '${row.values[1]}' as reference_id , CAST('${newdatetime1}' AS datetime) as transaction_date,  
+                    CAST('${newdatetime2}' AS datetime) as payment_date , ${parseInt(row.values[7])} as amount , ${parseInt(row.values[7])} as payment_amount, 
+                   '${row.values[5]}' as status , 0 as isSame, NOW() as imported_at, NOW() as updated_at) AS tmp
+                    WHERE NOT EXISTS (
+                    SELECT transaction_id FROM transaction_import WHERE transaction_id = '${row.values[1]}' AND channel = 'LINKAJA' 
+                    ) LIMIT 1`, async function (error, rows, fields) {
                                         if (error) {
                                             console.log(error)
-                                        } else {
-                                            for (var i = 0; i < dataKonekthing.length; i++) {
-                                                var datetime3 = await row.values[2].split(" ")
-                                                var date3 = datetime3[0].split("/").reverse().join("-")
-                                                var newdatetime3 = date3.concat(" ", datetime3[1])
-                                                if ((moment(`${dataKonekthing[i].transactionDate}`).format('YYYY-MM-DD HH:mm:ss') === moment(`${newdatetime3}`).format('YYYY-MM-DD HH:mm:ss')) && (parseInt(dataKonekthing[i].amount) === parseInt(row.values[7]))) {
-                                                    await console.log('Insert data muslimpocket')
-                                                    await match_data.push(dataKonekthing[i])
-                                                    var datetime5 = await row.values[3].split(" ")
-                                                    var date5 = datetime5[0].split("/").reverse().join("-")
-                                                    var newdatetime5 = date5.concat(" ", datetime5[1])
-                                                    //insert data muslimpocket yang sama
-                                                    await mysqlCon.query(`INSERT INTO transaction ( bill_reff, sender , receiver , channel ,   
-                                                                                    transaction_id , tgl_transaksi ,total_pembayaran, tgl_pembayaran , total_amount ,
-                                                                                    attachment_id , penerima ,  bank_penerima , no_rekening_penerima, status, total_potongan_immobi, nama_rekening_penerima, export_bank) values ( 
-                                                                                    ${parseInt(dataKonekthing[i].id_linkaja)}, '${dataKonekthing[i].username_pengirim_linkaja}' , '${dataKonekthing[i].username_penerima_linkaja}' , 'linkaja' , '${dataKonekthing[i].trxId}' , CAST('${newdatetime5}' AS datetime) , ${parseInt(dataKonekthing[i].amount)},
-                                                                                    CAST('${dataKonekthing[i].transactionDate}' AS datetime) , ${parseInt(dataKonekthing[i].amount)} , ${id_attachment} , 
-                                                                                    "${dataKonekthing[i].masjid_nama}" , '${dataKonekthing[i].bank_nama}' , '${dataKonekthing[i].masjid_no_rekening}' , 
-                                                                                    '${dataKonekthing[i].status}', ${parseInt(dataKonekthing[i].amount) * (parameters[0].nilai_parameter)} , 
-                                                                                    "${dataKonekthing[i].masjid_pemilik_rekening}", "F"
-                                                                                )`, async function (error, rows, fields) {
+                                        }
+                                        for (var i = 0; i < dataKonekthing.length; i++) {
+                                            var datetime3 = await row.values[2].split(" ")
+                                            var date3 = datetime3[0].split("/").reverse().join("-")
+                                            var newdatetime3 = date3.concat(" ", datetime3[1])
+                                            if ((moment(`${dataKonekthing[i].transactionDate}`).format('YYYY-MM-DD HH:mm:ss') === moment(`${newdatetime3}`).format('YYYY-MM-DD HH:mm:ss')) && (parseInt(dataKonekthing[i].amount) === parseInt(row.values[7]))) {
+                                                await console.log('Insert data muslimpocket')
+
+                                                var datetime5 = await row.values[3].split(" ")
+                                                var date5 = datetime5[0].split("/").reverse().join("-")
+                                                var newdatetime5 = date5.concat(" ", datetime5[1])
+                                                //insert data muslimpocket yang sama
+                                                await mysqlCon.query(` 
+                                    INSERT INTO transaction_mp ( bill_no, sender , receiver , channel ,   
+                                        transaction_id , tgl_transaksi , tgl_pembayaran , total_amount , total_pembayaran,
+                                       nama_penerima ,  bank_penerima , no_rekening_penerima, nama_rekening_penerima, status, isTransfer,
+                                       imported_at, updated_at)
+                                    SELECT * 
+                                    FROM (
+                                        SELECT  ${parseInt(dataKonekthing[i].trxId)} as bill_no, '${dataKonekthing[i].username_pengirim_linkaja}' as sender , '${dataKonekthing[i].username_penerima_linkaja}' as receiver , 'linkaja' as channel , '${row.values[1]}' as transaction_id , CAST('${newdatetime5}' AS datetime) as tgl_transaksi ,
+                                        CAST('${dataKonekthing[i].transactionDate}' AS datetime) as tgl_pembayaran  , ${parseInt(dataKonekthing[i].amount)} as total_amount , ${parseInt(dataKonekthing[i].amount)} as total_pembayaran,
+                                     "${dataKonekthing[i].masjid_nama}" as nama_penerima , '${dataKonekthing[i].bank_nama}' as bank_penerima , '${dataKonekthing[i].masjid_no_rekening}' as no_rekening_penerima , "${dataKonekthing[i].masjid_pemilik_rekening}" as nama_rekening_penerima, 
+                                     '${dataKonekthing[i].status}' as status, "F" as isTransfer, NOW() as imported_at, NOW() as updated_at) AS tmp
+                                    WHERE NOT EXISTS (
+                                    SELECT transaction_id , tgl_pembayaran
+                                    FROM transaction_mp 
+                                    WHERE bill_no = '${dataKonekthing[i].trx_id}' AND channel = 'linkaja'
+                                    ) 
+                                    LIMIT 1`, function (error, rows, fields) {
+                                                    if (error) {
+                                                        console.log(error)
+
+                                                    }
+                                                });
+                                                console.log(rows, "update yang sama")
+                                                var datetime4 = await row.values[2].split(" ")
+                                                var date4 = datetime4[0].split("/").reverse().join("-")
+                                                var newdatetime4 = date4.concat(" ", datetime4[1])
+                                                await mysqlCon.query(`UPDATE transaction_import SET isSame = 1, reference_id = '${dataKonekthing[i].refNum}', updated_at = NOW() WHERE (payment_date = CAST('${newdatetime4}' AS datetime) AND channel = 'LINKAJA') AND isSame = 0  `,
+                                                    function (error, rows, fields) {
                                                         if (error) {
                                                             console.log(error)
 
-                                                        } else {
-                                                            await console.log(rows, "update yang sama")
-                                                            var datetime4 = await row.values[2].split(" ")
-                                                            var date4 = datetime4[0].split("/").reverse().join("-")
-                                                            var newdatetime4 = date4.concat(" ", datetime4[1])
-                                                            await mysqlCon.query(`SET sql_mode = '';
-                                                                            UPDATE transaction_import SET isSame = 1
-                                                                            WHERE payment_date = CAST('${newdatetime4}' AS datetime) AND payment_amount = '${parseInt(row.values[7])}' `,
-                                                                async function (error, rows, fields) {
-                                                                    if (error) {
-                                                                        console.log(error)
-
-                                                                    } else {
-                                                                        console.log(rows)
-                                                                    }
-                                                                });
-
                                                         }
-
                                                     });
 
-                                                    //insert data import yang sama
-
-                                                    await count++
-                                                }
+                                                await count++
                                             }
                                         }
+
                                     });
 
                                 }
@@ -450,54 +438,15 @@ async function convertCsvLinkAja(req, res) {
                         })
 
                     })
-                if (count < 1) {
-                    console.log(count)
-                    res.send({ status: 'success', desc: 'tidak ada data yang masuk' })
-                } else {
-                    console.log(count)
-                    res.send({ status: 'success', desc: `${count} data match`, match_data })
-                }
 
+                console.log(count)
+                res.send({ status: 'success', desc: `${count} data masuk, ${matchcount} data sama`})
 
-            } else if (req.file.mimetype.includes("csv")) {
-                await workbook.csv.readFile(req.file.path)
-                    .then(worksheet => {
-                        worksheet.eachRow({ includeEmpty: false }, function (row, rowNumber) {
-                            console.log("Row " + rowNumber + " = " + row.values)
-                            if (row.values.includes("OVO", 4)) {
-                                mysqlCon.query(`
-            INSERT INTO transaksi ( 
-            merchant_id , merchant_name , channel ,   
-            transaction_id , reference_id , tgl_transaksi , 
-              tgl_pembayaran , amount , total_amount ,
-              attachment_id , customer_email ,  customer_name ,
-              status
-          ) values ( 
-              ${row.values[2]} , '${row.values[3]}' , '${row.values[4]}' , 
-              ${row.values[5]} , ${row.values[6]} , '${row.values[11]}',  
-              '${row.values[12]}' , ${row.values[13]} , ${row.values[14]} , 
-              ${id_attachment} , '${row.values[9]}' , '${row.values[8]}' , 
-              '${row.values[15]}' 
-          )`, async function (error, rows, fields) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(400).send('Oops, something happens')
-                                    } else {
-                                        count++
-                                    }
-                                });
-                                count++
-                            }
-                        });
-                        res.send(`data : ${count}`)
-                    });
+        });
+    } else {
+        res.send("file bukan csv atau xlsx")
+    }
 
-
-            } else {
-                res.send("file bukan csv atau xlsx")
-            }
-        }
-    });
 }
 
 async function convertCsvGoPay(req, res) {
@@ -777,7 +726,7 @@ const getRakapTrMP = () => {
 
 async function getRekap(req, res) {
 
-    const dataRekapBank =  await getRekapBank();
+    const dataRekapBank = await getRekapBank();
     const dataRekapImport = await getRakapTrImport();
     const dataRekapMP = await getRakapTrMP();
 
